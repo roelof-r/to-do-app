@@ -266,11 +266,7 @@
       <input class="task-input" id="taskInput" placeholder="Nieuwe taak toevoegen…" onkeydown="if(event.key==='Enter')addTask()">
     </div>
     <div class="add-options">
-      <select class="option-select" id="taskLevel">
-        <option value="dag">Dag</option>
-        <option value="week">Week</option>
-        <option value="maand">Maand</option>
-      </select>
+      <label style="font-size:0.78rem;color:var(--ink-muted);align-self:center;">Deadline:</label>
       <input class="deadline-input" id="taskDeadline" type="date">
       <button class="btn-add" onclick="addTask()">+ Toevoegen</button>
     </div>
@@ -448,12 +444,28 @@ function checkFallbackReminders() {
   });
 }
 
+// ─── LEVEL OP BASIS VAN DEADLINE ─────────────────────────
+function getLevel(deadline) {
+  if (!deadline) return 'maand';
+  const d = new Date(deadline + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.round((d - today) / 86400000);
+
+  if (diff <= 0) return 'dag'; // vandaag of te laat
+
+  // Einde van deze week (zondag)
+  const dayOfWeek = today.getDay(); // 0=zo, 1=ma ... 6=za
+  const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+  if (diff <= daysUntilSunday) return 'week';
+
+  return 'maand';
+}
+
 // ─── TABS ─────────────────────────────────────────────────
 function switchTab(tab, el) {
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  document.getElementById('taskLevel').value = tab;
   render();
 }
 
@@ -462,8 +474,8 @@ function addTask() {
   const input = document.getElementById('taskInput');
   const title = input.value.trim();
   if (!title) return;
-  const level = document.getElementById('taskLevel').value;
   const deadline = document.getElementById('taskDeadline').value;
+  const level = getLevel(deadline);
   tasks.unshift({ id: Date.now(), title, level, deadline, done: false, doneAt: null });
   input.value = '';
   save();
@@ -491,9 +503,13 @@ function deleteTask(id) {
 
 // ─── RENDER ───────────────────────────────────────────────
 function render() {
+  // Herbereken level voor elke taak op basis van huidige datum
+  tasks.forEach(t => { if (!t.done) t.level = getLevel(t.deadline); });
+  save();
+
   const filtered  = tasks.filter(t => t.level === currentTab);
   const active    = filtered.filter(t => !t.done);
-  const completed = filtered.filter(t =>  t.done);
+  const completed = tasks.filter(t => t.done); // voltooide altijd allemaal tonen per tab
 
   const allActive = tasks.filter(t => !t.done);
   const dag   = allActive.filter(t => t.level === 'dag').length;
@@ -512,9 +528,11 @@ function render() {
   document.getElementById('activeList').innerHTML = active.map(taskHTML).join('');
   document.getElementById('emptyState').style.display = active.length ? 'none' : 'block';
 
+  // Voltooide taken gefilterd per tab
+  const completedFiltered = tasks.filter(t => t.done);
   const compList = document.getElementById('completedList');
-  compList.innerHTML = `<div class="task-list">${completed.map(taskHTML).join('')}</div>`;
-  document.getElementById('completedCount').textContent = completed.length;
+  compList.innerHTML = `<div class="task-list">${completedFiltered.map(taskHTML).join('')}</div>`;
+  document.getElementById('completedCount').textContent = completedFiltered.length;
 }
 
 function taskHTML(t) {
@@ -524,10 +542,7 @@ function taskHTML(t) {
       <div class="checkbox ${t.done ? 'checked' : ''}" onclick="toggleDone(${t.id})"></div>
       <div class="task-body">
         <div class="task-title">${escHtml(t.title)}</div>
-        <div class="task-meta">
-          <span class="tag ${t.level}">${t.level}</span>
-          ${dl}
-        </div>
+        <div class="task-meta">${dl}</div>
       </div>
       <div class="task-actions">
         <button class="btn-icon" onclick="deleteTask(${t.id})">✕</button>
