@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Taken">
+<meta name="theme-color" content="#C2622A">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>Taken</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #F5F0E8;
+    --surface: #FDFAF4;
+    --ink: #1A1410;
+    --ink-soft: #6B5E52;
+    --ink-muted: #A89B8F;
+    --accent: #C2622A;
+    --accent-light: #F0DDD1;
+    --green: #3A7D5A;
+    --green-light: #D4EAE0;
+    --border: #E2D9CE;
+    --shadow: 0 2px 16px rgba(26,20,16,0.08);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .app {
+    max-width: 680px; margin: 0 auto;
+    padding: calc(16px + var(--safe-top)) 20px calc(80px + var(--safe-bottom));
+  }
+
+  /* HEADER */
+  header { margin-bottom: 28px; }
+  .header-top { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
+  h1 { font-family: 'DM Serif Display', serif; font-size: 2.4rem; color: var(--ink); letter-spacing: -0.5px; }
+  .date-label { font-size: 0.82rem; color: var(--ink-muted); }
+  .reminder-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent-light); color: var(--accent);
+    font-size: 0.75rem; font-weight: 500; padding: 4px 10px;
+    border-radius: 20px; margin-top: 10px; cursor: pointer;
+    transition: background 0.2s; user-select: none;
+  }
+  .reminder-badge:hover { background: #e8c9b8; }
+  .reminder-dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+  .reminder-dot.off { background: var(--ink-muted); }
+
+  /* TABS */
+  .tabs { display: flex; gap: 0; margin-bottom: 24px; background: var(--border); border-radius: 10px; padding: 3px; }
+  .tab {
+    flex: 1; text-align: center; padding: 8px 4px; border-radius: 8px;
+    font-size: 0.82rem; font-weight: 500; cursor: pointer;
+    color: var(--ink-muted); transition: all 0.2s; user-select: none;
+    border: none; background: none;
+  }
+  .tab.active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+
+  /* ADD TASK */
+  .add-task {
+    background: var(--surface); border: 1.5px solid var(--border);
+    border-radius: 14px; padding: 16px; margin-bottom: 24px;
+    box-shadow: var(--shadow);
+  }
+  .add-task-row { display: flex; gap: 10px; align-items: center; }
+  .task-input {
+    flex: 1; border: none; background: transparent; font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem; color: var(--ink); outline: none;
+  }
+  .task-input::placeholder { color: var(--ink-muted); }
+  .add-options { display: flex; gap: 8px; margin-top: 12px; align-items: center; flex-wrap: wrap; }
+  .option-select, .deadline-input {
+    border: 1.5px solid var(--border); background: var(--bg); border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.78rem; color: var(--ink-soft);
+    padding: 5px 10px; outline: none; cursor: pointer;
+  }
+  .btn-add {
+    margin-left: auto; background: var(--accent); color: white; border: none;
+    border-radius: 8px; padding: 7px 18px; font-family: 'DM Sans', sans-serif;
+    font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: background 0.2s;
+  }
+  .btn-add:hover { background: #a8521f; }
+
+  /* SECTION LABEL */
+  .section-label {
+    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink-muted); margin-bottom: 10px; margin-top: 4px;
+  }
+
+  /* TASK LIST */
+  .task-list { display: flex; flex-direction: column; gap: 8px; }
+  .task-item {
+    background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; display: flex; align-items: flex-start; gap: 12px;
+    transition: all 0.25s; animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+  .task-item:hover { border-color: var(--ink-muted); }
+  .task-item.done { opacity: 0.5; }
+  .task-item.done .task-title { text-decoration: line-through; color: var(--ink-muted); }
+
+  .checkbox {
+    width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--border);
+    cursor: pointer; flex-shrink: 0; margin-top: 1px; display: flex; align-items: center;
+    justify-content: center; transition: all 0.2s; background: transparent;
+  }
+  .checkbox.checked { background: var(--green); border-color: var(--green); }
+  .checkbox.checked::after { content: '✓'; color: white; font-size: 11px; font-weight: 700; }
+
+  .task-body { flex: 1; min-width: 0; }
+  .task-title { font-size: 0.92rem; font-weight: 500; line-height: 1.4; margin-bottom: 4px; }
+  .task-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .tag {
+    font-size: 0.7rem; font-weight: 500; padding: 2px 8px; border-radius: 10px;
+    background: var(--bg); color: var(--ink-muted); border: 1px solid var(--border);
+  }
+  .tag.maand { background: #EDE8F5; color: #6B50A8; border-color: #D8CEEE; }
+  .tag.week  { background: #E8F0F5; color: #2E6B9A; border-color: #C8DCE8; }
+  .tag.dag   { background: var(--accent-light); color: var(--accent); border-color: #DDB89A; }
+
+  .deadline-tag { font-size: 0.7rem; color: var(--ink-muted); display: flex; align-items: center; gap: 3px; }
+  .deadline-tag.urgent { color: var(--accent); font-weight: 600; }
+
+  .task-actions { display: flex; gap: 4px; flex-shrink: 0; }
+  .btn-icon {
+    width: 30px; height: 30px; border: none; background: transparent; cursor: pointer;
+    border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    color: var(--ink-muted); font-size: 14px; transition: all 0.15s;
+  }
+  .btn-icon:hover { background: var(--bg); color: var(--ink); }
+
+  /* COMPLETED */
+  .completed-toggle {
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    margin-top: 28px; margin-bottom: 12px; user-select: none;
+  }
+  .completed-toggle span { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-muted); }
+  .toggle-arrow { font-size: 10px; color: var(--ink-muted); transition: transform 0.2s; }
+  .toggle-arrow.open { transform: rotate(90deg); }
+  .completed-count { font-size: 0.7rem; background: var(--border); color: var(--ink-muted); padding: 1px 7px; border-radius: 10px; font-weight: 600; }
+
+  /* EMPTY */
+  .empty { text-align: center; padding: 40px 20px; color: var(--ink-muted); }
+  .empty-icon { font-size: 2.2rem; margin-bottom: 10px; }
+  .empty p { font-size: 0.88rem; line-height: 1.6; }
+
+  /* STATS */
+  .stats-bar { display: flex; gap: 10px; margin-bottom: 24px; }
+  .stat-card { flex: 1; background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px; padding: 12px 10px; text-align: center; }
+  .stat-num { font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: var(--ink); }
+  .stat-lbl { font-size: 0.68rem; color: var(--ink-muted); font-weight: 500; margin-top: 1px; }
+  .stat-card.accent { background: var(--accent-light); border-color: #DDB89A; }
+  .stat-card.accent .stat-num { color: var(--accent); }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(26,20,16,0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; animation: fadeOverlay 0.2s ease;
+  }
+  @keyframes fadeOverlay { from {opacity:0} to {opacity:1} }
+  .modal {
+    background: var(--surface); border-radius: 18px; padding: 28px;
+    width: 90%; max-width: 380px; box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+    animation: slideUp 0.25s ease; margin: 20px;
+  }
+  @keyframes slideUp { from {opacity:0;transform:translateY(20px)} to {opacity:1;transform:translateY(0)} }
+  .modal h2 { font-family: 'DM Serif Display', serif; font-size: 1.4rem; margin-bottom: 6px; }
+  .modal p { font-size: 0.85rem; color: var(--ink-soft); margin-bottom: 16px; line-height: 1.5; }
+  .reminder-time { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--bg); border-radius: 10px; margin-bottom: 8px; }
+  .reminder-time-icon { font-size: 1.2rem; }
+  .reminder-time-label { font-weight: 600; font-size: 0.9rem; }
+  .reminder-time-sub { font-size: 0.76rem; color: var(--ink-muted); margin-top: 1px; }
+  .notif-status { font-size: 0.78rem; padding: 8px 12px; border-radius: 8px; margin-bottom: 14px; }
+  .notif-status.ok { background: var(--green-light); color: var(--green); }
+  .notif-status.warn { background: var(--accent-light); color: var(--accent); }
+  .modal-btn {
+    width: 100%; padding: 11px; border: none; border-radius: 10px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 600; cursor: pointer; margin-top: 6px;
+  }
+  .modal-btn.primary { background: var(--ink); color: white; }
+  .modal-btn.secondary { background: var(--bg); color: var(--ink-soft); border: 1.5px solid var(--border); }
+
+  /* INSTALL BANNER */
+  .install-banner {
+    background: var(--ink); color: white; border-radius: 14px;
+    padding: 14px 16px; margin-bottom: 20px; display: flex;
+    align-items: center; gap: 12px; animation: fadeIn 0.3s ease;
+  }
+  .install-banner-text { flex: 1; font-size: 0.85rem; line-height: 1.4; }
+  .install-banner strong { font-weight: 600; display: block; margin-bottom: 2px; }
+  .install-banner small { opacity: 0.7; font-size: 0.76rem; }
+  .btn-install { background: var(--accent); color: white; border: none; border-radius: 8px; padding: 8px 14px; font-family: 'DM Sans', sans-serif; font-size: 0.8rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .btn-dismiss { background: transparent; border: none; color: white; opacity: 0.6; cursor: pointer; font-size: 18px; padding: 4px; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: calc(28px + var(--safe-bottom)); left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: white; border-radius: 12px;
+    padding: 12px 20px; font-size: 0.85rem; font-weight: 500;
+    z-index: 200; animation: toastIn 0.3s ease; white-space: nowrap; max-width: 90vw;
+    text-overflow: ellipsis; overflow: hidden;
+  }
+  @keyframes toastIn { from {opacity:0;transform:translateX(-50%) translateY(10px)} to {opacity:1;transform:translateX(-50%) translateY(0)} }
+
+  @media (max-width: 400px) {
+    h1 { font-size: 1.9rem; }
+    .stats-bar { gap: 6px; }
+    .stat-card { padding: 10px 6px; }
+    .stat-num { font-size: 1.3rem; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="header-top">
+      <h1>Taken</h1>
+      <span class="date-label" id="todayLabel"></span>
+    </div>
+    <div class="reminder-badge" id="reminderBadge" onclick="openModal()">
+      <span class="reminder-dot" id="reminderDot"></span>
+      <span id="reminderBadgeText">Herinneringen: 08:00 &amp; 19:00</span>
+    </div>
+  </header>
+
+  <!-- INSTALL BANNER -->
+  <div class="install-banner" id="installBanner" style="display:none">
+    <div class="install-banner-text">
+      <strong>Voeg toe aan startscherm</strong>
+      <small>Gebruik de app als een echte app, ook offline</small>
+    </div>
+    <button class="btn-install" id="installBtn" onclick="installApp()">Installeren</button>
+    <button class="btn-dismiss" onclick="dismissInstall()">✕</button>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-bar" id="statsBar"></div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('dag',this)">Dag</button>
+    <button class="tab" onclick="switchTab('week',this)">Week</button>
+    <button class="tab" onclick="switchTab('maand',this)">Maand</button>
+  </div>
+
+  <!-- ADD TASK -->
+  <div class="add-task">
+    <div class="add-task-row">
+      <input class="task-input" id="taskInput" placeholder="Nieuwe taak toevoegen…" onkeydown="if(event.key==='Enter')addTask()">
+    </div>
+    <div class="add-options">
+      <label style="font-size:0.78rem;color:var(--ink-muted);align-self:center;">Deadline:</label>
+      <input class="deadline-input" id="taskDeadline" type="date">
+      <button class="btn-add" onclick="addTask()">+ Toevoegen</button>
+    </div>
+  </div>
+
+  <div class="section-label" id="activeLabel">Vandaag</div>
+  <div class="task-list" id="activeList"></div>
+  <div id="emptyState" class="empty" style="display:none">
+    <div class="empty-icon">✦</div>
+    <p>Geen taken voor dit niveau.<br>Voeg er een toe hierboven.</p>
+  </div>
+
+  <div class="completed-toggle" onclick="toggleCompleted()">
+    <span class="toggle-arrow" id="toggleArrow">▶</span>
+    <span>Voltooid</span>
+    <span class="completed-count" id="completedCount">0</span>
+  </div>
+  <div id="completedList" style="display:none"></div>
+
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" style="display:none" onclick="closeModal(event)">
+  <div class="modal">
+    <h2>Herinneringen</h2>
+    <p>Je ontvangt maximaal 2 meldingen per dag voor openstaande taken — één 's ochtends, één 's avonds.</p>
+    <div id="notifStatus" class="notif-status warn">⚠️ Meldingen nog niet ingeschakeld</div>
+    <div class="reminder-time">
+      <div class="reminder-time-icon">🌅</div>
+      <div>
+        <div class="reminder-time-label">Ochtend — 08:00</div>
+        <div class="reminder-time-sub">Overzicht van de dag</div>
+      </div>
+    </div>
+    <div class="reminder-time">
+      <div class="reminder-time-icon">🌇</div>
+      <div>
+        <div class="reminder-time-label">Avond — 19:00</div>
+        <div class="reminder-time-sub">Laatste herinnering</div>
+      </div>
+    </div>
+    <button class="modal-btn primary" id="notifBtn" onclick="requestNotifications()" style="margin-top:14px">
+      🔔 Meldingen inschakelen
+    </button>
+    <button class="modal-btn secondary" onclick="closeModalDirect()" style="margin-top:6px">Sluiten</button>
+  </div>
+</div>
+
+<script>
+// ─── STATE ────────────────────────────────────────────────
+let tasks = JSON.parse(localStorage.getItem('taken_v2') || '[]');
+let remindersSent = JSON.parse(localStorage.getItem('reminders_sent_v2') || '{}');
+let currentTab = 'dag';
+let completedOpen = false;
+let deferredInstallPrompt = null;
+let notifPermission = 'default';
+
+function save() { localStorage.setItem('taken_v2', JSON.stringify(tasks)); }
+function saveReminders() { localStorage.setItem('reminders_sent_v2', JSON.stringify(remindersSent)); }
+
+// ─── DATE ─────────────────────────────────────────────────
+const days = ['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
+const months = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+const now = new Date();
+document.getElementById('todayLabel').textContent =
+  `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]}`;
+document.getElementById('taskDeadline').value = now.toISOString().slice(0,10);
+
+// ─── SERVICE WORKER ───────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').then(reg => {
+    console.log('SW registered');
+    scheduleRemindersViaSW();
+  }).catch(console.error);
+}
+
+// ─── PWA INSTALL PROMPT ───────────────────────────────────
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  if (!localStorage.getItem('installDismissed')) {
+    document.getElementById('installBanner').style.display = 'flex';
+  }
+});
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('installBanner').style.display = 'none';
+  showToast('🎉 App geïnstalleerd op startscherm!');
+});
+
+function installApp() {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.then(r => {
+      if (r.outcome === 'accepted') showToast('🎉 App wordt geïnstalleerd!');
+      deferredInstallPrompt = null;
+      document.getElementById('installBanner').style.display = 'none';
+    });
+  }
+}
+
+function dismissInstall() {
+  document.getElementById('installBanner').style.display = 'none';
+  localStorage.setItem('installDismissed', '1');
+}
+
+// ─── NOTIFICATIONS ────────────────────────────────────────
+function updateNotifUI() {
+  notifPermission = Notification?.permission || 'default';
+  const dot = document.getElementById('reminderDot');
+  const btn = document.getElementById('notifBtn');
+  const status = document.getElementById('notifStatus');
+
+  if (notifPermission === 'granted') {
+    dot.classList.remove('off');
+    if (btn) { btn.textContent = '✓ Meldingen ingeschakeld'; btn.disabled = true; btn.style.opacity = '0.6'; }
+    if (status) { status.className = 'notif-status ok'; status.textContent = '✓ Meldingen zijn ingeschakeld'; }
+  } else {
+    dot.classList.add('off');
+    if (btn) { btn.textContent = '🔔 Meldingen inschakelen'; btn.disabled = false; btn.style.opacity = '1'; }
+    if (status) { status.className = 'notif-status warn'; status.textContent = '⚠️ Meldingen nog niet ingeschakeld'; }
+  }
+}
+
+async function requestNotifications() {
+  if (!('Notification' in window)) {
+    showToast('Je browser ondersteunt geen meldingen.');
+    return;
+  }
+  const result = await Notification.requestPermission();
+  notifPermission = result;
+  updateNotifUI();
+  if (result === 'granted') {
+    scheduleRemindersViaSW();
+    showToast('🔔 Meldingen ingeschakeld!');
+  } else {
+    showToast('Meldingen geweigerd — check je browserinstellingen.');
+  }
+}
+
+function scheduleRemindersViaSW() {
+  if (notifPermission !== 'granted') return;
+  const openCount = tasks.filter(t => !t.done).length;
+  if (!openCount) return;
+  navigator.serviceWorker.ready.then(reg => {
+    if (reg.active) {
+      reg.active.postMessage({ type: 'SCHEDULE_REMINDERS', openCount });
+    }
+  });
+}
+
+// Fallback: browser-side scheduling (tab must be open)
+function checkFallbackReminders() {
+  if (notifPermission !== 'granted') return;
+  const openTasks = tasks.filter(t => !t.done);
+  if (!openTasks.length) return;
+  const todayKey = now.toISOString().slice(0,10);
+
+  [
+    { hour: 8,  key: `${todayKey}_08`, icon: '🌅', msg: `Goedemorgen! Je hebt ${openTasks.length} taak${openTasks.length > 1 ? 'en' : ''} open.` },
+    { hour: 19, key: `${todayKey}_19`, icon: '🌇', msg: `Goedenavond! Nog ${openTasks.length} openstaande taak${openTasks.length > 1 ? 'en' : ''}.` }
+  ].forEach(({ hour, key, icon, msg }) => {
+    if (remindersSent[key]) return;
+    const target = new Date(); target.setHours(hour, 0, 0, 0);
+    const delay = target - now;
+    if (delay > 0) {
+      setTimeout(() => {
+        if (!remindersSent[key]) {
+          remindersSent[key] = true;
+          saveReminders();
+          new Notification(`${icon} Taken`, { body: msg, icon: './icon-192.png' });
+        }
+      }, delay);
+    }
+  });
+}
+
+// ─── LEVEL OP BASIS VAN DEADLINE ─────────────────────────
+function getLevel(deadline) {
+  if (!deadline) return 'maand';
+  const d = new Date(deadline + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.round((d - today) / 86400000);
+
+  // Dag: deadline is vandaag (of al voorbij)
+  if (diff <= 0) return 'dag';
+
+  // Einde van deze week = eerstvolgende zondag
+  const dayOfWeek = today.getDay(); // 0=zo, 1=ma ... 6=za
+  const daysUntilSunday = dayOfWeek === 0 ? 7 : 7 - dayOfWeek;
+  if (diff <= daysUntilSunday) return 'week';
+
+  // Maand: alles binnen 4 weken vanaf vandaag (week is de eerste van de 4)
+  if (diff <= 28) return 'maand';
+
+  // Verder dan 4 weken: ook maand (of eventueel later negeren)
+  return 'maand';
+}
+
+// ─── TABS ─────────────────────────────────────────────────
+function switchTab(tab, el) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  render();
+}
+
+// ─── ADD TASK ─────────────────────────────────────────────
+function addTask() {
+  const input = document.getElementById('taskInput');
+  const title = input.value.trim();
+  if (!title) return;
+  const deadline = document.getElementById('taskDeadline').value;
+  const level = getLevel(deadline);
+  tasks.unshift({ id: Date.now(), title, level, deadline, done: false, doneAt: null });
+  input.value = '';
+  save();
+  scheduleRemindersViaSW();
+  render();
+  showToast('Taak toegevoegd ✓');
+}
+
+// ─── TOGGLE DONE ──────────────────────────────────────────
+function toggleDone(id) {
+  const t = tasks.find(t => t.id === id);
+  if (!t) return;
+  t.done = !t.done;
+  t.doneAt = t.done ? new Date().toISOString() : null;
+  save();
+  render();
+}
+
+// ─── DELETE ───────────────────────────────────────────────
+function deleteTask(id) {
+  tasks = tasks.filter(t => t.id !== id);
+  save();
+  render();
+}
+
+// ─── RENDER ───────────────────────────────────────────────
+function render() {
+  // Herbereken level voor elke taak op basis van huidige datum
+  tasks.forEach(t => { if (!t.done) t.level = getLevel(t.deadline); });
+  save();
+
+  const filtered  = tasks.filter(t => t.level === currentTab);
+  const active    = filtered.filter(t => !t.done);
+  const completed = tasks.filter(t => t.done); // voltooide altijd allemaal tonen per tab
+
+  const allActive = tasks.filter(t => !t.done);
+  const dag   = allActive.filter(t => t.level === 'dag').length;
+  const week  = allActive.filter(t => t.level === 'week').length;
+  const maand = allActive.filter(t => t.level === 'maand').length;
+
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-card accent"><div class="stat-num">${dag}</div><div class="stat-lbl">Vandaag</div></div>
+    <div class="stat-card"><div class="stat-num">${week}</div><div class="stat-lbl">Week</div></div>
+    <div class="stat-card"><div class="stat-num">${maand}</div><div class="stat-lbl">Maand</div></div>
+  `;
+
+  const labelMap = { dag: 'Vandaag', week: 'Deze week', maand: 'Deze maand' };
+  document.getElementById('activeLabel').textContent = labelMap[currentTab];
+
+  document.getElementById('activeList').innerHTML = active.map(taskHTML).join('');
+  document.getElementById('emptyState').style.display = active.length ? 'none' : 'block';
+
+  // Voltooide taken gefilterd per tab
+  const completedFiltered = tasks.filter(t => t.done);
+  const compList = document.getElementById('completedList');
+  compList.innerHTML = `<div class="task-list">${completedFiltered.map(taskHTML).join('')}</div>`;
+  document.getElementById('completedCount').textContent = completedFiltered.length;
+}
+
+function taskHTML(t) {
+  const dl = t.deadline ? deadlineTag(t.deadline, t.done) : '';
+  return `
+    <div class="task-item ${t.done ? 'done' : ''}">
+      <div class="checkbox ${t.done ? 'checked' : ''}" onclick="toggleDone(${t.id})"></div>
+      <div class="task-body">
+        <div class="task-title">${escHtml(t.title)}</div>
+        <div class="task-meta">${dl}</div>
+      </div>
+      <div class="task-actions">
+        <button class="btn-icon" onclick="deleteTask(${t.id})">✕</button>
+      </div>
+    </div>`;
+}
+
+function deadlineTag(dl, done) {
+  const d = new Date(dl + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff = Math.round((d - today) / 86400000);
+  let cls = 'deadline-tag';
+  let label;
+  if (done) { label = formatDate(d); }
+  else if (diff < 0) { cls += ' urgent'; label = `${Math.abs(diff)}d te laat`; }
+  else if (diff === 0) { cls += ' urgent'; label = 'Vandaag'; }
+  else if (diff === 1) { cls += ' urgent'; label = 'Morgen'; }
+  else { label = formatDate(d); }
+  return `<span class="${cls}">📅 ${label}</span>`;
+}
+
+function formatDate(d) { return `${d.getDate()} ${months[d.getMonth()]}`; }
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ─── COMPLETED TOGGLE ─────────────────────────────────────
+function toggleCompleted() {
+  completedOpen = !completedOpen;
+  document.getElementById('completedList').style.display = completedOpen ? 'block' : 'none';
+  document.getElementById('toggleArrow').classList.toggle('open', completedOpen);
+}
+
+// ─── MODAL ────────────────────────────────────────────────
+function openModal() { updateNotifUI(); document.getElementById('modalOverlay').style.display = 'flex'; }
+function closeModal(e) { if (e.target === document.getElementById('modalOverlay')) closeModalDirect(); }
+function closeModalDirect() { document.getElementById('modalOverlay').style.display = 'none'; }
+
+// ─── TOAST ────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  clearTimeout(toastTimer);
+  document.querySelector('.toast')?.remove();
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  toastTimer = setTimeout(() => el.remove(), 3200);
+}
+
+// ─── START ────────────────────────────────────────────────
+updateNotifUI();
+checkFallbackReminders();
+render();
+</script>
+</body>
+</html>
