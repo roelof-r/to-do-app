@@ -451,13 +451,18 @@ function getLevel(deadline) {
   const today = new Date(); today.setHours(0,0,0,0);
   const diff = Math.round((d - today) / 86400000);
 
-  if (diff <= 0) return 'dag'; // vandaag of te laat
+  // Dag: deadline is vandaag (of al voorbij)
+  if (diff <= 0) return 'dag';
 
-  // Einde van deze week (zondag)
+  // Einde van deze week = eerstvolgende zondag
   const dayOfWeek = today.getDay(); // 0=zo, 1=ma ... 6=za
-  const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+  const daysUntilSunday = dayOfWeek === 0 ? 7 : 7 - dayOfWeek;
   if (diff <= daysUntilSunday) return 'week';
 
+  // Maand: alles binnen 4 weken vanaf vandaag (week is de eerste van de 4)
+  if (diff <= 28) return 'maand';
+
+  // Verder dan 4 weken: ook maand (of eventueel later negeren)
   return 'maand';
 }
 
